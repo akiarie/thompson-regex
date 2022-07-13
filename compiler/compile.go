@@ -80,7 +80,7 @@ func init() {
 
 // A matchcode contains the code for matching a parsed expression
 type matchcode struct {
-	name, code string
+	Name, Code string
 }
 
 // nnode returns a matchcode for the given character
@@ -100,19 +100,21 @@ func nnode(c rune) matchcode {
 func cnode(a, b matchcode) matchcode {
 	data := struct {
 		Func, MatchA, MatchB string
-	}{newmatcher(), a.name, b.name}
+	}{newmatcher(), a.Name, b.Name}
 	var buf strings.Builder
 	if err := templates.cnode.Execute(&buf, &data); err != nil {
 		panic(err)
 	}
-	matchers := []string{a.code, b.code, buf.String()}
+	matchers := []string{a.Code, b.Code, buf.String()}
 	return matchcode{data.Func, strings.Join(matchers, methodSeparator)}
 }
 
+// closurenode returns a matchcode which permits matching of the closure of the
+// given matchcode, where the kind of closure is given by the op rune.
 func closurenode(a matchcode, op rune) matchcode {
 	data := struct {
 		Func, MatchA string
-	}{newmatcher(), a.name}
+	}{newmatcher(), a.Name}
 	var buf strings.Builder
 	tmplmap := map[rune]*template.Template{
 		'*': templates.closure,
@@ -121,7 +123,7 @@ func closurenode(a matchcode, op rune) matchcode {
 	if err := tmplmap[op].Execute(&buf, &data); err != nil {
 		panic(err)
 	}
-	matchers := []string{a.code, buf.String()}
+	matchers := []string{a.Code, buf.String()}
 	return matchcode{data.Func, strings.Join(matchers, methodSeparator)}
 }
 
@@ -154,9 +156,52 @@ func Compile(regex string) (string, error) {
 			push(nnode(c))
 		}
 	}
-	matchers := make([]string, len(stack))
-	for i := range stack {
-		matchers[i] = stack[i].code
+
+	tmpl, err := template.New("program").Parse(`package main
+
+import (
+	"fmt"
+	"log"
+	"os"
+)
+
+{{ range . }}
+{{ .Code }}
+
+{{ end }}
+func main() {
+	if len(os.Args) != 2 {
+		log.Fatalln("must supply input string")
 	}
-	return strings.Join(matchers, methodSeparator), nil
+	input := os.Args[1]
+
+	matchers := []func(string, int) (bool, int){
+		{{  range . -}}
+		{{ .Name }}, 
+		{{ end -}}
+	}
+
+	pos := 0
+	for _, matcher := range matchers {
+		ok, n := matcher(input, pos)
+		if !ok {
+			log.Fatalln("unmatching")
+		}
+		pos += n
+		if pos >= len(input) {
+			log.Fatalln("unmatching: input string too short")
+		}
+	}
+	fmt.Println("matching")
+}
+`)
+	if err != nil {
+		return "", err
+	}
+
+	var buf strings.Builder
+	if err := tmpl.Execute(&buf, stack); err != nil {
+		panic(err)
+	}
+	return buf.String(), nil
 }
