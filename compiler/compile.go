@@ -54,6 +54,9 @@ func init() {
 
 	templates.closure, err = template.New("closure").Parse(`func {{.Func}}(input string, pos int) (bool, int) {
 	if ok, n := {{.MatchA}}(input, pos); ok {
+		if pos+n >= len(input) {
+			return false, n
+		}
 		if ok, subn := {{.Func}}(input, pos+n); ok {
 			return true, n + subn
 		}
@@ -66,6 +69,9 @@ func init() {
 
 	templates.posClosure, err = template.New("posclosure").Parse(`func {{.Func}}(input string, pos int) (bool, int) {
 	if ok, n := {{.MatchA}}(input, pos); ok {
+		if pos+n >= len(input) {
+			return false, n
+		}
 		if ok, subn := {{.Func}}(input, pos+n); ok {
 			return true, n + subn
 		}
@@ -183,14 +189,14 @@ func main() {
 
 	pos := 0
 	for _, matcher := range matchers {
+		if pos >= len(input) {
+			log.Fatalln("unmatching: input string too short")
+		}
 		ok, n := matcher(input, pos)
 		if !ok {
 			log.Fatalln("unmatching")
 		}
 		pos += n
-		if pos >= len(input) {
-			log.Fatalln("unmatching: input string too short")
-		}
 	}
 	fmt.Println("matching")
 }
