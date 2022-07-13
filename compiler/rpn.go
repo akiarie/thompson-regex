@@ -81,17 +81,17 @@ reverse Polish regular expression.
 
 We make use of the following language and translation scheme:
 	expr   → expr *  		  { print('*') }
-		   | expr +           { print('+') }
-		   | seq
+           | expr +           { print('+') }
+           | seq
 
 	seq    → union seq
-		   | union
+           | union
 
 	union  → basic '|' union  { print('|') }
-		   | basic
+           | basic
 
 	basic  → ( expr )
-		   | symbol           { print(symbol) }
+           | symbol           { print(symbol) }
 
 	symbol → a-Z | A-Z | 0-9
 */
