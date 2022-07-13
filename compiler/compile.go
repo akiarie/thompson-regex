@@ -148,8 +148,7 @@ func Compile(regex string) (string, error) {
 	}
 	for _, c := range regex {
 		switch c {
-		case '+':
-		case '*':
+		case '+', '*':
 			push(closurenode(pop(), c))
 			continue
 		case '|':
