@@ -7,6 +7,10 @@ import (
 	"text/template"
 )
 
+const (
+	methodSeparator string = "\n\n"
+)
+
 var matchernames []string = []string{}
 
 func newmatcher() string {
@@ -15,37 +19,63 @@ func newmatcher() string {
 	return name
 }
 
-var (
-	nnodeTmpl,
-	cnodeTmpl *template.Template
-)
+type tmpset struct {
+	nnode,
+	cnode,
+	closure,
+	posClosure *template.Template
+}
+
+var templates tmpset
 
 func init() {
-	nnode := `func {{.Func}}(input string, pos int) (bool, int) {
+	var err error
+	templates.nnode, err = template.New("nnode").Parse(`func {{.Func}}(input string, pos int) (bool, int) {
 	if input[pos] == '{{.Char}}' {
 		return true, 1
 	}
 	return false, 0
-}`
-	tmpl, err := template.New("nnode").Parse(nnode)
+}`)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	nnodeTmpl = tmpl
 
-	cnode := `func {{.Func}}(input string, pos int) (bool, int) {
+	templates.cnode, err = template.New("cnode").Parse(`func {{.Func}}(input string, pos int) (bool, int) {
 	if ok, n := {{.MatchA}}(input, pos); ok {
 		return true, n
 	} else if ok, n := {{.MatchB}}(input, pos); ok {
 		return true, n
 	}
 	return false, 0
-}`
-	tmpl, err = template.New("cnode").Parse(cnode)
+}`)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	cnodeTmpl = tmpl
+
+	templates.closure, err = template.New("closure").Parse(`func {{.Func}}(input string, pos int) (bool, int) {
+	if ok, n := {{.MatchA}}(input, pos); ok {
+		if ok, subn := {{.Func}}(input, pos+n); ok {
+			return true, n + subn
+		}
+	} 
+	return true, 0
+}`)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	templates.posClosure, err = template.New("posclosure").Parse(`func {{.Func}}(input string, pos int) (bool, int) {
+	if ok, n := {{.MatchA}}(input, pos); ok {
+		if ok, subn := {{.Func}}(input, pos+n); ok {
+			return true, n + subn
+		}
+		return true, n
+	} 
+	return false, 0
+}`)
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
 
 // A matchcode contains the code for matching a parsed expression
@@ -59,7 +89,7 @@ func nnode(c rune) matchcode {
 		Func, Char string
 	}{newmatcher(), string(c)}
 	var buf strings.Builder
-	if err := nnodeTmpl.Execute(&buf, &data); err != nil {
+	if err := templates.nnode.Execute(&buf, &data); err != nil {
 		panic(err)
 	}
 	return matchcode{data.Func, buf.String()}
@@ -72,10 +102,27 @@ func cnode(a, b matchcode) matchcode {
 		Func, MatchA, MatchB string
 	}{newmatcher(), a.name, b.name}
 	var buf strings.Builder
-	if err := cnodeTmpl.Execute(&buf, &data); err != nil {
+	if err := templates.cnode.Execute(&buf, &data); err != nil {
 		panic(err)
 	}
-	return matchcode{data.Func, buf.String()}
+	matchers := []string{a.code, b.code, buf.String()}
+	return matchcode{data.Func, strings.Join(matchers, methodSeparator)}
+}
+
+func closurenode(a matchcode, op rune) matchcode {
+	data := struct {
+		Func, MatchA string
+	}{newmatcher(), a.name}
+	var buf strings.Builder
+	tmplmap := map[rune]*template.Template{
+		'*': templates.closure,
+		'+': templates.posClosure,
+	}
+	if err := tmplmap[op].Execute(&buf, &data); err != nil {
+		panic(err)
+	}
+	matchers := []string{a.code, buf.String()}
+	return matchcode{data.Func, strings.Join(matchers, methodSeparator)}
 }
 
 // Compile returns a string containing the Go source for a command-line program
@@ -95,6 +142,7 @@ func Compile(regex string) (string, error) {
 		switch c {
 		case '+':
 		case '*':
+			push(closurenode(pop(), c))
 			continue
 		case '|':
 			if len(stack) < 2 {
@@ -106,5 +154,9 @@ func Compile(regex string) (string, error) {
 			push(nnode(c))
 		}
 	}
-	return "", nil
+	matchers := make([]string, len(stack))
+	for i := range stack {
+		matchers[i] = stack[i].code
+	}
+	return strings.Join(matchers, methodSeparator), nil
 }
