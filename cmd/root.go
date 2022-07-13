@@ -26,15 +26,11 @@ purposes only.`,
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		sievedexp, err := compiler.Sieve(args[0])
-		if err != nil {
-			log.Fatalln("cannot sive:", err)
-		}
-		rpnexp, err := compiler.RPNConvert(sievedexp)
+		rpnexp, err := compiler.RPNConvert(args[0])
 		if err != nil {
 			log.Fatalln("cannot convert to RPN:", err)
 		}
-		matcher, err := compiler.Sieve(rpnexp)
+		matcher, err := compiler.Compile(rpnexp)
 		if err != nil {
 			log.Fatalln("cannot produce Go matcher code:", err)
 		}

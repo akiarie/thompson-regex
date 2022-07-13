@@ -46,26 +46,3 @@ We may drop certain pairs of parentheses if we adopt the conventions that
 
 1. The unary operator _*_ has the highest precedence and is left associative
 2. Concatenation has second-highest precedence and is left associative.
-
-
-## our regular expressions.
-
-In our case, our choice of alphabet is the set of digits and letters. This gives us the following
-BNF definition (we have used range notation to reduce verbosity; it is assumed that there are no
-spaces between subsequent symbols):
-
-```
-expr   → expr *
-       | expr +
-       | seq
-
-seq    → union | union seq
-
-union  → basic | basic '|' basic
-
-basic  → ( expr ) 
-       | symbol
-
-symbol → a-Z | A-Z | 0-9
-```
-
