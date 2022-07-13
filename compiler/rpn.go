@@ -79,8 +79,8 @@ func (p *parser) symbol() error {
 RPNConvert validates a regular expression and (if valid) converts it to a
 reverse Polish regular expression.
 
-We make use of the following language and translation scheme:
-    expr   → expr *  		  { print('*') }
+We make use of the following language-and-translation scheme:
+    expr   → expr *           { print('*') }
            | expr +           { print('+') }
            | seq
 
