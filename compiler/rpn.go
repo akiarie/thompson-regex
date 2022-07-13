@@ -80,20 +80,20 @@ RPNConvert validates a regular expression and (if valid) converts it to a
 reverse Polish regular expression.
 
 We make use of the following language and translation scheme:
-	expr   → expr *  		  { print('*') }
+    expr   → expr *  		  { print('*') }
            | expr +           { print('+') }
            | seq
 
-	seq    → union seq
+    seq    → union seq
            | union
 
-	union  → basic '|' union  { print('|') }
+    union  → basic '|' union  { print('|') }
            | basic
 
-	basic  → ( expr )
+    basic  → ( expr )
            | symbol           { print(symbol) }
 
-	symbol → a-Z | A-Z | 0-9
+    symbol → a-Z | A-Z | 0-9
 */
 func RPNConvert(regex string) (string, error) {
 	p := &parser{input: regex}
