@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+const concatChar byte = '^'
+
 func end(input string) bool {
 	return len(input) == 0 || input[0] == ')'
 }
@@ -27,17 +29,15 @@ func exprSieve(input string, w *strings.Builder) (int, error) {
 	return n, nil
 }
 
-type parseFunc func(input string, w *strings.Builder) (int, error)
-
 func concatSieve(input string, w *strings.Builder) (int, error) {
-	n, err := closed(input, w, exprSieve)
+	n, err := closedSieve(input, w)
 	if err != nil {
 		return 0, err
 	}
 	if !end(input[n:]) {
 		var buf strings.Builder
 		if m, err := concatSieve(input[n:], &buf); err == nil {
-			w.WriteString("⋅")
+			w.WriteByte(concatChar)
 			w.WriteString(buf.String())
 			return n + m, nil
 		}
@@ -45,8 +45,8 @@ func concatSieve(input string, w *strings.Builder) (int, error) {
 	return n, nil
 }
 
-func closed(input string, w *strings.Builder, exprfunc parseFunc) (int, error) {
-	n, err := basic(input, w, exprfunc)
+func closedSieve(input string, w *strings.Builder) (int, error) {
+	n, err := basicSieve(input, w)
 	if err != nil {
 		return 0, err
 	}
@@ -59,14 +59,14 @@ func closed(input string, w *strings.Builder, exprfunc parseFunc) (int, error) {
 	return n, nil
 }
 
-func basic(input string, w *strings.Builder, exprfunc parseFunc) (int, error) {
+func basicSieve(input string, w *strings.Builder) (int, error) {
 	// ε is permissible
 	if end(input) {
 		return 0, nil
 	}
 	if input[0] == '(' {
 		w.WriteByte('(')
-		n, err := exprfunc(input[1:], w)
+		n, err := exprSieve(input[1:], w)
 		if err != nil {
 			return 1, err
 		}

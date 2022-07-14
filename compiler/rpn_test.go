@@ -4,11 +4,10 @@ import "testing"
 
 func TestRPNConvert(t *testing.T) {
 	cases := map[string]string{
-		//"a⋅(bc|)*⋅d": "a⋅bc|*⋅d",
-		//"a⋅b|c⋅d":
-		//"(a⋅b)|(c⋅d)":
-		//"a⋅n⋅d⋅r⋅e⋅w|j⋅a⋅c⋅k⋅s⋅o⋅n":
-		//"(a⋅n⋅d⋅r⋅e⋅w)|(j⋅a⋅c⋅k⋅s⋅o⋅n)":
+		"a^(b|c)*^d":                "abc|*d^^",
+		"a^b|c^d":                   "ab^cd^|",
+		"(a^b)|(c^d)":               "ab^cd^|",
+		"a^n^d^r^e^w|j^a^c^k^s^o^n": "andrew^^^^^jackson^^^^^^|",
 	}
 	for r, rpn := range cases {
 		out, err := RPNConvert(r)
