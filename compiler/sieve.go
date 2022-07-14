@@ -9,15 +9,15 @@ func end(input string) bool {
 	return len(input) == 0 || input[0] == ')'
 }
 
-func expr(input string, w *strings.Builder) (int, error) {
-	n, err := concat(input, w)
+func exprSieve(input string, w *strings.Builder) (int, error) {
+	n, err := concatSieve(input, w)
 	if err != nil {
 		return 0, err
 	}
 	if !end(input[n:]) {
 		if input[n] == '|' {
 			w.WriteByte('|')
-			m, err := expr(input[n+1:], w)
+			m, err := exprSieve(input[n+1:], w)
 			if err != nil {
 				return n + 1, err
 			}
@@ -27,14 +27,14 @@ func expr(input string, w *strings.Builder) (int, error) {
 	return n, nil
 }
 
-func concat(input string, w *strings.Builder) (int, error) {
+func concatSieve(input string, w *strings.Builder) (int, error) {
 	n, err := closed(input, w)
 	if err != nil {
 		return 0, err
 	}
 	if !end(input[n:]) {
 		var buf strings.Builder
-		if m, err := concat(input[n:], &buf); err == nil {
+		if m, err := concatSieve(input[n:], &buf); err == nil {
 			w.WriteString("⋅")
 			w.WriteString(buf.String())
 			return n + m, nil
@@ -107,7 +107,7 @@ We make use of the following language-and-translation scheme:
 */
 func Sieve(regex string) (string, error) {
 	var buf strings.Builder
-	if _, err := expr(regex, &buf); err != nil {
+	if _, err := exprSieve(regex, &buf); err != nil {
 		return "", fmt.Errorf("%s: partial result %q", err, buf.String())
 	}
 	return buf.String(), nil
