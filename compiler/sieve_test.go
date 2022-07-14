@@ -4,11 +4,11 @@ import "testing"
 
 func TestSieveConvert(t *testing.T) {
 	cases := map[string]string{
-		"a(b|c)*d":           "a⋅bc|*⋅d",
-		"ab|cd":              "ab⋅cd|",
-		"(ab)|(cd)":          "abcd|",
-		"andrew|jackson":     "andrewj|ackson",
-		"(andrew)|(jackson)": "andrew⋅jackson⋅|",
+		"a(b|c)*d":           "a⋅(bc|)*⋅d",
+		"ab|cd":              "a⋅b|c⋅d",
+		"(ab)|(cd)":          "(a⋅b)|(c⋅d)",
+		"andrew|jackson":     "a⋅n⋅d⋅r⋅e⋅w|j⋅a⋅c⋅k⋅s⋅o⋅n",
+		"(andrew)|(jackson)": "(a⋅n⋅d⋅r⋅e⋅w)|(j⋅a⋅c⋅k⋅s⋅o⋅n)",
 	}
 	for r, rpn := range cases {
 		out, err := Sieve(r)
