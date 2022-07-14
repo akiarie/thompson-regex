@@ -1,13 +1,14 @@
 package compiler
 
-/*
+import "testing"
+
 func TestRPNConvert(t *testing.T) {
 	cases := map[string]string{
-		"a(b|c)*d": "a⋅bc|*⋅d",
-		"ab|cd":    "ab⋅cd|",
-		//"(ab)|(cd)": "abcd|",
-		//"andrew|jackson":     "andrewj|ackson",
-		//"(andrew)|(jackson)": "andrew⋅jackson⋅|",
+		//"a⋅(bc|)*⋅d": "a⋅bc|*⋅d",
+		//"a⋅b|c⋅d":
+		//"(a⋅b)|(c⋅d)":
+		//"a⋅n⋅d⋅r⋅e⋅w|j⋅a⋅c⋅k⋅s⋅o⋅n":
+		//"(a⋅n⋅d⋅r⋅e⋅w)|(j⋅a⋅c⋅k⋅s⋅o⋅n)":
 	}
 	for r, rpn := range cases {
 		out, err := RPNConvert(r)
@@ -19,4 +20,3 @@ func TestRPNConvert(t *testing.T) {
 		}
 	}
 }
-*/

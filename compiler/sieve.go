@@ -27,8 +27,10 @@ func exprSieve(input string, w *strings.Builder) (int, error) {
 	return n, nil
 }
 
+type parseFunc func(input string, w *strings.Builder) (int, error)
+
 func concatSieve(input string, w *strings.Builder) (int, error) {
-	n, err := closed(input, w)
+	n, err := closed(input, w, exprSieve)
 	if err != nil {
 		return 0, err
 	}
@@ -43,8 +45,8 @@ func concatSieve(input string, w *strings.Builder) (int, error) {
 	return n, nil
 }
 
-func closed(input string, w *strings.Builder) (int, error) {
-	n, err := basic(input, w)
+func closed(input string, w *strings.Builder, exprfunc parseFunc) (int, error) {
+	n, err := basic(input, w, exprfunc)
 	if err != nil {
 		return 0, err
 	}
@@ -57,14 +59,14 @@ func closed(input string, w *strings.Builder) (int, error) {
 	return n, nil
 }
 
-func basic(input string, w *strings.Builder) (int, error) {
+func basic(input string, w *strings.Builder, exprfunc parseFunc) (int, error) {
 	// ε is permissible
 	if end(input) {
 		return 0, nil
 	}
 	if input[0] == '(' {
 		w.WriteByte('(')
-		n, err := expr(input[1:], w)
+		n, err := exprfunc(input[1:], w)
 		if err != nil {
 			return 1, err
 		}

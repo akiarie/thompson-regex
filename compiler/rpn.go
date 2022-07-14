@@ -24,16 +24,20 @@ func expr(input string, w *strings.Builder) (int, error) {
 }
 
 func concat(input string, w *strings.Builder) (int, error) {
-	n, err := closed(input, w)
+	n, err := closed(input, w, expr)
 	if err != nil {
 		return 0, err
 	}
 	if !end(input[n:]) {
-		var buf strings.Builder
-		if m, err := concat(input[n:], &buf); err == nil {
+		if rune(input[n]) == rune('⋅') {
+			var buf strings.Builder
+			m, err := concat(input[n+1:], &buf)
+			if err == nil {
+				return n + 1, err
+			}
 			w.WriteString("⋅")
 			w.WriteString(buf.String())
-			return n + m, nil
+			return n + 1 + m, nil
 		}
 	}
 	return n, nil
