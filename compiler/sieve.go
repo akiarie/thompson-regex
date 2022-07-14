@@ -16,11 +16,11 @@ func expr(input string, w *strings.Builder) (int, error) {
 	}
 	if !end(input[n:]) {
 		if input[n] == '|' {
+			w.WriteByte('|')
 			m, err := expr(input[n+1:], w)
 			if err != nil {
 				return n + 1, err
 			}
-			w.WriteByte('|')
 			return n + 1 + m, nil
 		}
 	}
@@ -63,6 +63,7 @@ func basic(input string, w *strings.Builder) (int, error) {
 		return 0, nil
 	}
 	if input[0] == '(' {
+		w.WriteByte('(')
 		n, err := expr(input[1:], w)
 		if err != nil {
 			return 1, err
@@ -70,6 +71,7 @@ func basic(input string, w *strings.Builder) (int, error) {
 		if input[n+1] != ')' {
 			return 0, fmt.Errorf("bracket not closed")
 		}
+		w.WriteByte(')')
 		return n + 2, nil
 	}
 	return 1, symbol(input[0], w)
@@ -84,27 +86,26 @@ func symbol(c byte, w *strings.Builder) error {
 }
 
 /*
-RPNConvert validates a regular expression and (if valid) converts it to a
-reverse Polish regular expression.
+Sieve validates a regular expression and inserts concatenation breaks.
 
 We make use of the following language-and-translation scheme:
-    expr   → concat '|' expr { print('|') }
+    expr   → concat '|' { print('|') } expr
            | concat
 
     concat → closed { print('⋅') } concat
            | closed
 
-	closed → basic *         { print('*') }
-           | basic +         { print('+') }
+	closed → basic * { print('*') }
+           | basic + { print('+') }
 		   | basic
 
     basic  → ( expr )
-           | symbol          { print(symbol) }
+           | symbol  { print(symbol) }
            | ε
 
     symbol → a-Z | A-Z | 0-9
 */
-func RPNConvert(regex string) (string, error) {
+func Sieve(regex string) (string, error) {
 	var buf strings.Builder
 	if _, err := expr(regex, &buf); err != nil {
 		return "", fmt.Errorf("%s: partial result %q", err, buf.String())
