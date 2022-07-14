@@ -32,13 +32,12 @@ func (p *parser) expr() error {
 		if c == '*' || c == '+' {
 			p.write(string(c))
 			p.pos++
-			// add concat operator
-			p.write("⋅")
 			return p.expr()
 		}
 		return err
 	}
 	if p.end() {
+		p.write("⋅")
 		return nil
 	}
 	// concat only stops if at end of expr or closure thus, if neither of these
@@ -106,11 +105,11 @@ RPNConvert validates a regular expression and (if valid) converts it to a
 reverse Polish regular expression.
 
 We make use of the following language-and-translation scheme:
-    expr   → concat * expr    { print('*') }
-           | concat + expr    { print('+') }
-           | concat
+    expr   → concat * expr    { print('*.') }
+           | concat + expr    { print('+.') }
+           | concat           { print('.') }
 
-    concat → union||concat
+    concat → union concat
            | union
 
     union  → basic '|' union  { print('|') }
