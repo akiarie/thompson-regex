@@ -118,7 +118,7 @@ We make use of the following language-and-translation scheme:
 
     basic  → ( expr )
            | symbol           { print(symbol) }
-		   | ε
+           | ε
 
     symbol → a-Z | A-Z | 0-9
 */
