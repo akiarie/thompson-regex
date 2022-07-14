@@ -7,33 +7,53 @@ import (
 type parser struct {
 	input, output string
 	pos           int
+	exits         int
+}
+
+const exitchar = ')'
+
+func (p *parser) end() bool {
+	if p.pos >= len(p.input) {
+		return true
+	}
+	if p.exits > 0 && p.input[p.pos] == exitchar {
+		return true
+	}
+	return false
 }
 
 func (p *parser) write(s string) {
 	p.output += s
 }
 
-func (p *parser) expr(nested bool) error {
+func (p *parser) expr() error {
+	if err := p.concat(); err != nil {
+		c := p.input[p.pos]
+		if c == '*' || c == '+' {
+			p.write(string(c))
+			p.pos++
+			// add concat operator
+			p.write("⋅")
+			return p.expr()
+		}
+		return err
+	}
+	if p.end() {
+		return nil
+	}
+	// concat only stops if at end of expr or closure thus, if neither of these
+	// has occurred, there must be some error
+	return fmt.Errorf("premature end of expr on %q, exits: %d", p.input[p.pos], p.exits)
+}
+
+func (p *parser) concat() error {
 	if err := p.union(); err != nil {
 		return err
 	}
-	for p.pos < len(p.input) {
-		if err := p.union(); err != nil {
-			c := p.input[p.pos]
-			if c == '*' || c == '+' {
-				p.write(string(c))
-				p.pos++
-				continue
-			} else if nested && c == ')' {
-				return nil
-			}
-			return err
-		}
-		// Thompson adds a concatenation operator at this point, but I have
-		// omitted it because I'm not sure what its purpose is:
-		// p.write("⋅")
+	if p.end() {
+		return nil
 	}
-	return nil
+	return p.concat()
 }
 
 func (p *parser) union() error {
@@ -51,11 +71,17 @@ func (p *parser) union() error {
 }
 
 func (p *parser) basic() error {
+	// ε is permissible
+	if p.end() {
+		return nil
+	}
 	if p.input[p.pos] == '(' {
 		p.pos++
-		if err := p.expr(true); err != nil {
+		p.exits++
+		if err := p.expr(); err != nil {
 			return err
 		}
+		p.exits--
 		if p.input[p.pos] != ')' {
 			return fmt.Errorf("bracket not closed")
 		}
@@ -80,11 +106,11 @@ RPNConvert validates a regular expression and (if valid) converts it to a
 reverse Polish regular expression.
 
 We make use of the following language-and-translation scheme:
-    expr   → expr *           { print('*') }
-           | expr +           { print('+') }
-           | seq
+    expr   → concat * expr    { print('*') }
+           | concat + expr    { print('+') }
+           | concat
 
-    seq    → union seq
+    concat → union||concat
            | union
 
     union  → basic '|' union  { print('|') }
@@ -92,12 +118,13 @@ We make use of the following language-and-translation scheme:
 
     basic  → ( expr )
            | symbol           { print(symbol) }
+		   | ε
 
     symbol → a-Z | A-Z | 0-9
 */
 func RPNConvert(regex string) (string, error) {
 	p := &parser{input: regex}
-	if err := p.expr(false); err != nil {
+	if err := p.expr(); err != nil {
 		return "", fmt.Errorf("%s: partial result %q", err, p.output)
 	}
 	return p.output, nil
