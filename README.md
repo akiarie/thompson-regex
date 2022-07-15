@@ -72,7 +72,7 @@ code that parses it, which in this case was IBM 7094 object code.
 I find this idea beautiful, and wanted a chance to play around with it for myself, as well as
 demonstrate to anyone interested the way the algorithm works. Since the aim is demonstration rather
 than a concrete (or usable) implementation, it makes sense to compile to a high-level language,
-which is why I have started by targetting Go.
+which is why I have started by targeting Go.
 
 ## Note on terminology.
 
