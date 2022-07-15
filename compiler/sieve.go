@@ -16,17 +16,31 @@ func exprSieve(input string, w *strings.Builder) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if !end(input[n:]) {
-		if input[n] == '|' {
-			w.WriteByte('|')
-			m, err := exprSieve(input[n+1:], w)
-			if err != nil {
-				return n + 1, err
-			}
-			return n + 1 + m, nil
-		}
+	m, err := unionSieve(input[n:], w)
+	if err != nil {
+		return n, err
 	}
-	return n, nil
+	return n + m, nil
+}
+
+func unionSieve(input string, w *strings.Builder) (int, error) {
+	// ε is permissible
+	if end(input) {
+		return 0, nil
+	}
+	if input[0] != '|' {
+		return 0, fmt.Errorf("nonempty union must start with '|'")
+	}
+	w.WriteByte('|')
+	n, err := concatSieve(input[1:], w)
+	if err != nil {
+		return 1, err
+	}
+	m, err := unionSieve(input[1+n:], w)
+	if err != nil {
+		return 1 + n, err
+	}
+	return 1 + n + m, nil
 }
 
 func concatSieve(input string, w *strings.Builder) (int, error) {
@@ -34,15 +48,30 @@ func concatSieve(input string, w *strings.Builder) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if !end(input[n:]) {
-		var buf strings.Builder
-		if m, err := concatSieve(input[n:], &buf); err == nil {
-			w.WriteByte(concatChar)
-			w.WriteString(buf.String())
-			return n + m, nil
-		}
+	m, err := restSieve(input[n:], w)
+	if err != nil {
+		return n, err
 	}
-	return n, nil
+	return n + m, nil
+}
+
+func restSieve(input string, w *strings.Builder) (int, error) {
+	// ε is permissible
+	if end(input) {
+		return 0, nil
+	}
+	var buf strings.Builder
+	n, err := closedSieve(input, &buf)
+	if err != nil {
+		return 0, nil // allows backtracking
+	}
+	w.WriteByte(concatChar)
+	w.WriteString(buf.String())
+	m, err := restSieve(input[n:], w)
+	if err != nil {
+		return n, err
+	}
+	return n + m, nil
 }
 
 func closedSieve(input string, w *strings.Builder) (int, error) {
@@ -91,11 +120,13 @@ func symbol(c byte, w *strings.Builder) error {
 Sieve validates a regular expression and inserts concatenation breaks.
 
 We make use of the following language-and-translation scheme:
-    expr   → concat '|' { print('|') } expr
-           | concat
+    expr   → concat union
+    union  → '|' { print('|') } concat union
+           | ε
 
-    concat → closed { print('⋅') } concat
-           | closed
+	concat → closed rest
+    rest   → { print('⋅') } closed rest
+		   | ε
 
 	closed → basic * { print('*') }
            | basic + { print('+') }

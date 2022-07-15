@@ -10,17 +10,31 @@ func expr(input string, w *strings.Builder) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if !end(input[n:]) {
-		if input[n] == '|' {
-			m, err := expr(input[n+1:], w)
-			if err != nil {
-				return n + 1, err
-			}
-			w.WriteByte('|')
-			return n + 1 + m, nil
-		}
+	m, err := union(input[n:], w)
+	if err != nil {
+		return n, err
 	}
-	return n, nil
+	return n + m, nil
+}
+
+func union(input string, w *strings.Builder) (int, error) {
+	// ε is permissible
+	if end(input) {
+		return 0, nil
+	}
+	if input[0] != '|' {
+		return 0, fmt.Errorf("nonempty union must start with '|'")
+	}
+	n, err := concat(input[1:], w)
+	if err != nil {
+		return 1, err
+	}
+	w.WriteByte('|')
+	m, err := union(input[1+n:], w)
+	if err != nil {
+		return 1 + n, err
+	}
+	return 1 + n + m, nil
 }
 
 func concat(input string, w *strings.Builder) (int, error) {
@@ -28,19 +42,31 @@ func concat(input string, w *strings.Builder) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if !end(input[n:]) {
-		if input[n] == concatChar {
-			var buf strings.Builder
-			m, err := concat(input[n+1:], &buf)
-			if err != nil {
-				return n + 1, err
-			}
-			w.WriteString(buf.String())
-			w.WriteByte(concatChar)
-			return n + 1 + m, nil
-		}
+	m, err := rest(input[n:], w)
+	if err != nil {
+		return n, err
 	}
-	return n, nil
+	return n + m, nil
+}
+
+func rest(input string, w *strings.Builder) (int, error) {
+	// ε is permissible
+	if end(input) {
+		return 0, nil
+	}
+	if input[0] != concatChar {
+		return 0, nil // allow backtracking
+	}
+	n, err := closed(input[1:], w)
+	if err != nil {
+		return 1, err
+	}
+	w.WriteByte(concatChar)
+	m, err := rest(input[1+n:], w)
+	if err != nil {
+		return 1 + n, err
+	}
+	return 1 + n + m, nil
 }
 
 func closed(input string, w *strings.Builder) (int, error) {
@@ -56,6 +82,9 @@ func closed(input string, w *strings.Builder) (int, error) {
 	}
 	return n, nil
 }
+
+// A ntparser is a parser for a nonterminal.
+type ntparser func(input string, w *strings.Builder) (int, error)
 
 func basic(input string, w *strings.Builder) (int, error) {
 	// ε is permissible
@@ -80,18 +109,20 @@ RPNConvert validates a regular expression and (if valid) converts it to a
 reverse Polish regular expression.
 
 We make use of the following language-and-translation scheme:
-    expr   → concat '|' expr   { print('|') }
-           | concat
+    expr   → concat union
+    union  → '|' concat { print('|') } union
+           | ε
 
-    concat → closed '⋅' concat { print('⋅') }
-           | closed
+	concat → closed rest
+    rest   → '⋅' closed { print('⋅') } rest
+		   | ε
 
-	closed → basic *           { print('*') }
-           | basic +           { print('+') }
+	closed → basic *  { print('*') }
+           | basic +  { print('+') }
 		   | basic
 
     basic  → ( expr )
-           | symbol            { print(symbol) }
+           | symbol   { print(symbol) }
            | ε
 
     symbol → a-Z | A-Z | 0-9
