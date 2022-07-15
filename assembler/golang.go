@@ -103,21 +103,24 @@ import (
 // A matcher is a function representing a particular expression, returning true
 // if the given rune slice matches the expression with the length of the match,
 // or false otherwise with an undefined integer.
-type matcher func([]rune, int) (bool, int)
+type matcher func([]rune) (bool, int)
 
 // runematcher returns a matcher for the given rune.
 func runematcher(c rune) matcher {
-	return func(input []rune, pos int) (bool, int) {
-		return input[pos] == c, 1
+	return func(input []rune) (bool, int) {
+		if len(input) > 0 {
+			return input[0] == c, 1
+		}
+		return false, 0
 	}
 }
 
 // ormatcher returns a single matcher for strings matching any of the
 // given matchers
 func ormatcher(matchers ...matcher) matcher {
-	return func(input []rune, pos int) (bool, int) {
+	return func(input []rune) (bool, int) {
 		for _, m := range matchers {
-			if ok, n := m(input, pos); ok {
+			if ok, n := m(input); ok {
 				return true, n
 			}		
 		}
@@ -128,10 +131,10 @@ func ormatcher(matchers ...matcher) matcher {
 // concatmatcher returns a single matcher for strings matching the
 // concatenation of the given matchers
 func concatmatcher(matchers ...matcher) matcher {
-	return func(input []rune, pos int) (bool, int) {
+	return func(input []rune) (bool, int) {
 		p := 0
 		for _, m := range matchers {
-			if ok, n := m(input, pos+p); ok {
+			if ok, n := m(input[p:]); ok {
 				p += n
 				continue
 			}
@@ -154,11 +157,11 @@ func kmatcher(m matcher, k int) matcher {
 // closurematcher returns a single matcher for strings matching the closure of
 // the given matcher
 func closurematcher(m matcher, min int) matcher {
-	return func(input []rune, pos int) (bool, int) {
+	return func(input []rune) (bool, int) {
 		// match min occurrences first
-		if ok, n := kmatcher(m, min)(input, pos); ok {
+		if ok, n := kmatcher(m, min)(input); ok {
 			// then match 1 or more additional 
-			if ok, subn := closurematcher(m, 1)(input, pos+n); ok {
+			if ok, subn := closurematcher(m, 1)(input[n:]); ok {
 				n += subn
 			}
 			return true, n
@@ -175,10 +178,17 @@ func main() {
 
 	matcher := {{ . }}
 
-	if ok, _ := matcher(input, 0); !ok {
-		log.Fatalln("unmatching")
+	matches := []string{}
+	for i := 0; i < len(input); {
+		if ok, n := matcher(input[i:]); ok {
+			matches = append(matches, string(input[i:i+n]))
+			i += n
+			continue
+		}
+		i++
 	}
-	fmt.Println("matching")
+
+	fmt.Printf("matches: %q\n", matches)
 }
 `)
 	if err != nil {
