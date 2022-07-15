@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"thompson-regex/assembler"
 	"thompson-regex/compiler"
 
 	"github.com/spf13/cobra"
@@ -34,11 +35,15 @@ purposes only.`,
 		if err != nil {
 			log.Fatalln("cannot convert to RPN:", err)
 		}
-		matcher, err := compiler.Compile(rpnexp)
+		rootgen, err := compiler.Compile(rpnexp)
+		if err != nil {
+			log.Fatalln("cannot produce matcher generator:", err)
+		}
+		code, err := assembler.Go(rootgen)
 		if err != nil {
 			log.Fatalln("cannot produce Go matcher code:", err)
 		}
-		fmt.Println(matcher)
+		fmt.Println(code)
 	},
 }
 

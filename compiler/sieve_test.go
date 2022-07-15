@@ -5,6 +5,7 @@ import "testing"
 func TestSieveConvert(t *testing.T) {
 	cases := map[string]string{
 		"a(b|c)*d":           "a⋅(b|c)*⋅d",
+		"a(ab|c)*d":          "a⋅(a⋅b|c)*⋅d",
 		"ab|cd":              "a⋅b|c⋅d",
 		"(ab)|(cd)":          "(a⋅b)|(c⋅d)",
 		"andrew|jackson":     "a⋅n⋅d⋅r⋅e⋅w|j⋅a⋅c⋅k⋅s⋅o⋅n",
