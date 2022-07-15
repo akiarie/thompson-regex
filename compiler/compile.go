@@ -89,22 +89,19 @@ func (m *binopmatcher) genfunc() string {
 	return buf.String()
 }
 
-// An unopmatcher matches based on the provided matcher and unary operation.
-type unopmatcher struct {
+// An closermatcher matches based on the provided matcher and unary operation.
+type closermatcher struct {
 	a  exprmatcher
 	op rune
 }
 
-func (m *unopmatcher) genfunc() string {
+func (m *closermatcher) genfunc() string {
 	data := struct {
 		MatchA string
 		Min    int
 	}{
 		MatchA: m.a.genfunc(),
-		Min: map[rune]int{
-			'*': 0,
-			'+': 1,
-		}[m.op],
+		Min:    map[rune]int{'*': 0, '+': 1}[m.op],
 	}
 	var buf strings.Builder
 	if err := templates.closurematcher.Execute(&buf, &data); err != nil {
@@ -129,7 +126,7 @@ func Compile(regex string) (string, error) {
 	for _, c := range regex {
 		switch c {
 		case '+', '*':
-			push(&unopmatcher{pop(), c})
+			push(&closermatcher{pop(), c})
 			continue
 		case '|', '⋅':
 			if len(stack) < 2 {
@@ -172,7 +169,7 @@ func runematcher(c rune) matcher {
 func ormatcher(matchers ...matcher) matcher {
 	return func(input []rune, pos int) (bool, int) {
 		for _, m := range matchers {
-			if ok, n := a(input, pos); ok {
+			if ok, n := m(input, pos); ok {
 				return true, n
 			}		
 		}
@@ -199,13 +196,11 @@ func concatmatcher(matchers ...matcher) matcher {
 // kmatcher returns a single matcher for strings matching exactly k occurrences
 // of the given matcher
 func kmatcher(m matcher, k int) matcher {
-	return func(input []rune, pos int) (bool, int) {
-		matchers := make([]matcher, k)
-		for i := range k {
-			matchers[i] = m
-		}
-		return concatmatcher(matchers)
+	matchers := make([]matcher, k)
+	for i := 0; i < k; i++ {
+		matchers[i] = m
 	}
+	return concatmatcher(matchers...)
 }
 
 // closurematcher returns a single matcher for strings matching the closure of
@@ -214,8 +209,8 @@ func closurematcher(m matcher, min int) matcher {
 	return func(input []rune, pos int) (bool, int) {
 		// match min occurrences first
 		if ok, n := kmatcher(m, min)(input, pos); ok {
-			// then match zero or more
-			if ok, subn := closurematcher(m, 0)(input, pos+n); ok {
+			// then match 1 or more additional 
+			if ok, subn := closurematcher(m, 1)(input, pos+n); ok {
 				n += subn
 			}
 			return true, n
@@ -224,14 +219,12 @@ func closurematcher(m matcher, min int) matcher {
 	}
 }
 
-{{ .Code }}
-
 func main() {
 	if len(os.Args) != 2 {
 		log.Fatalln("must supply input string")
 	}
 	input := os.Args[1]
-	if ok, _ := {{ .Name }}([]rune(input), 0); !ok {
+	if ok, _ := {{ . }}([]rune(input), 0); !ok {
 		log.Fatalln("unmatching")
 	}
 	fmt.Println("matching")
