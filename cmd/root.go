@@ -26,7 +26,11 @@ purposes only.`,
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		rpnexp, err := compiler.RPNConvert(args[0])
+		sievedexp, err := compiler.Sieve(args[0])
+		if err != nil {
+			log.Fatalln("cannot sive:", err)
+		}
+		rpnexp, err := compiler.RPNConvert(sievedexp)
 		if err != nil {
 			log.Fatalln("cannot convert to RPN:", err)
 		}

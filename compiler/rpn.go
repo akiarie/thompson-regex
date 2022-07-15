@@ -84,7 +84,7 @@ func closed(input []rune, w *strings.Builder) (int, error) {
 }
 
 // A ntparser is a parser for a nonterminal.
-type ntparser func(input string, w *strings.Builder) (int, error)
+type ntparser func(input []rune, w *strings.Builder) (int, error)
 
 func basic(input []rune, w *strings.Builder) (int, error) {
 	// ε is permissible

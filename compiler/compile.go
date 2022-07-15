@@ -22,6 +22,7 @@ func newmatcher() string {
 type tmpset struct {
 	nnode,
 	cnode,
+	seqnode,
 	closure,
 	posClosure *template.Template
 }
@@ -45,6 +46,18 @@ func init() {
 		return true, n
 	} else if ok, n := {{.MatchB}}(input, pos); ok {
 		return true, n
+	}
+	return false, 0
+}`)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	templates.seqnode, err = template.New("seqnode").Parse(`func {{.Func}}(input string, pos int) (bool, int) {
+	if ok, n := {{.MatchA}}(input, pos); ok {
+		if ok, m := {{.MatchB}}(input[n:], pos); ok {
+			return true, n + m
+		}
 	}
 	return false, 0
 }`)
@@ -84,12 +97,10 @@ func init() {
 	}
 }
 
-// A matchcode contains the code for matching a parsed expression
 type matchcode struct {
 	Name, Code string
 }
 
-// nnode returns a matchcode for the given character
 func nnode(c rune) matchcode {
 	data := struct {
 		Func, Char string
@@ -101,23 +112,28 @@ func nnode(c rune) matchcode {
 	return matchcode{data.Func, buf.String()}
 }
 
-// cnode returns a matchcode which permits matching of either of the given
-// matchcodes
-func cnode(a, b matchcode) matchcode {
+func binopnode(a, b matchcode, op rune) matchcode {
 	data := struct {
 		Func, MatchA, MatchB string
-	}{newmatcher(), a.Name, b.Name}
+	}{
+		Func: newmatcher(),
+		// note the swap, the topmost element on the stack is second in sequence
+		MatchA: b.Name,
+		MatchB: a.Name,
+	}
 	var buf strings.Builder
-	if err := templates.cnode.Execute(&buf, &data); err != nil {
+	tmplmap := map[rune]*template.Template{
+		'|': templates.cnode,
+		'⋅': templates.seqnode,
+	}
+	if err := tmplmap[op].Execute(&buf, &data); err != nil {
 		panic(err)
 	}
 	matchers := []string{a.Code, b.Code, buf.String()}
 	return matchcode{data.Func, strings.Join(matchers, methodSeparator)}
 }
 
-// closurenode returns a matchcode which permits matching of the closure of the
-// given matchcode, where the kind of closure is given by the op rune.
-func closurenode(a matchcode, op rune) matchcode {
+func unopnode(a matchcode, op rune) matchcode {
 	data := struct {
 		Func, MatchA string
 	}{newmatcher(), a.Name}
@@ -149,13 +165,13 @@ func Compile(regex string) (string, error) {
 	for _, c := range regex {
 		switch c {
 		case '+', '*':
-			push(closurenode(pop(), c))
+			push(unopnode(pop(), c))
 			continue
-		case '|':
+		case '|', '⋅':
 			if len(stack) < 2 {
 				return "", fmt.Errorf("cannot use %q with less than 2 elements", c)
 			}
-			push(cnode(pop(), pop()))
+			push(binopnode(pop(), pop(), c))
 			continue
 		default:
 			push(nnode(c))
