@@ -113,11 +113,11 @@ We make use of the following language-and-translation scheme:
     union  → '|' concat { print('|') } union
            | ε
 
-	concat → closed rest
+    concat → closed rest
     rest   → '⋅' closed { print('⋅') } rest
            | ε
 
-	closed → basic *  { print('*') }
+    closed → basic *  { print('*') }
            | basic +  { print('+') }
            | basic
 
