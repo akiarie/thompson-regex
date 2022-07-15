@@ -18,7 +18,7 @@ type CodeGenerators struct {
 	Closure    func(string, int) (string, error)
 }
 
-func codeGens() (*CodeGenerators, error) {
+func codeGensGo() (*CodeGenerators, error) {
 	tmplRune, err := template.New("c").Parse(`runematcher('{{ . }}')`)
 	if err != nil {
 		return nil, err
@@ -87,11 +87,6 @@ func codeGens() (*CodeGenerators, error) {
 }
 
 func Go(root MatcherGenerator) (string, error) {
-	gens, err := codeGens()
-	if err != nil {
-		return "", err
-	}
-
 	tmpl, err := template.New("program").Parse(`package main
 
 import (
@@ -191,6 +186,11 @@ func main() {
 	fmt.Printf("matches: %q\n", matches)
 }
 `)
+	if err != nil {
+		return "", err
+	}
+
+	gens, err := codeGensGo()
 	if err != nil {
 		return "", err
 	}
