@@ -14,7 +14,7 @@ We will use the example from Thompson's paper for demonstrative purposes. Execut
 ./thompson-regex 'a(b|c)*d'
 ```
 
-should produce output like
+should produce output like the below (after running `go fmt`):
 
 ```Golang
 package main
