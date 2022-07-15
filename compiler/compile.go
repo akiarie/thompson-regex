@@ -20,7 +20,7 @@ func newmatcher() string {
 }
 
 type tmpset struct {
-	nnode,
+	cmatcher,
 	cnode,
 	seqnode,
 	closure,
@@ -31,7 +31,7 @@ var templates tmpset
 
 func init() {
 	var err error
-	templates.nnode, err = template.New("nnode").Parse(`var {{.Func}} matcher = cmatcher('{{.Rune}}')`)
+	templates.cmatcher, err = template.New("nnode").Parse(`cmatcher('{{.Rune}}')`)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -92,26 +92,31 @@ func init() {
 	}
 }
 
+/// A matchcode contains the name and Go source for a function to match an expression.
+type matchcode struct {
+	Name, Code string
+}
+
 // A exprmatcher represents the matcher for a given expression.
 type exprmatcher interface {
-	// genfunc returns the code for a function to match the expression, using the
-	// provided name
-	genfunc(name string) string
+	// genfunc returns the name and code for a function to match the expression
+	// of the exprmatcher.
+	genfunc() *matchcode
 }
 
 // A cmatcher matches a single character.
 type cmatcher rune
 
-func (c cmatcher) genfunc(name string) string {
+func (c cmatcher) genfunc() *matchcode {
 	data := struct {
-		Func string
 		Rune string
-	}{name, string(c)}
+	}{string(c)}
 	var buf strings.Builder
-	if err := templates.nnode.Execute(&buf, &data); err != nil {
+	if err := templates.cmatcher.Execute(&buf, &data); err != nil {
 		panic(err)
 	}
-	return buf.String()
+	// we use cmatcher so only name is set
+	return &matchcode{Name: buf.String()}
 }
 
 // An binopmatcher matches based on the provided matchers and binary operation.
@@ -120,10 +125,11 @@ type binopmatcher struct {
 	op   rune
 }
 
-func (m *binopmatcher) genfunc(name string) string {
+func (m *binopmatcher) genfunc() *matchcode {
+	amc, bmc := m.a.genfunc(), m.b.genfunc()
 	data := struct {
 		Func, MatchA, MatchB string
-	}{name, newmatcher(), newmatcher()}
+	}{newmatcher(), amc.Name, bmc.Name}
 	var buf strings.Builder
 	tmplmap := map[rune]*template.Template{
 		'|': templates.cnode,
@@ -132,11 +138,16 @@ func (m *binopmatcher) genfunc(name string) string {
 	if err := tmplmap[m.op].Execute(&buf, &data); err != nil {
 		panic(err)
 	}
-	return strings.Join([]string{
-		m.a.genfunc(data.MatchA),
-		m.b.genfunc(data.MatchB),
-		buf.String(),
-	}, funcSeparator)
+	codes := []string{}
+	for _, code := range []string{amc.Code, bmc.Code, buf.String()} {
+		if strings.TrimSpace(code) != "" {
+			codes = append(codes, code)
+		}
+	}
+	return &matchcode{
+		Name: data.Func,
+		Code: strings.Join(codes, funcSeparator),
+	}
 }
 
 // An unopmatcher matches based on the provided matcher and unary operation.
@@ -145,10 +156,11 @@ type unopmatcher struct {
 	op rune
 }
 
-func (m *unopmatcher) genfunc(name string) string {
+func (m *unopmatcher) genfunc() *matchcode {
+	amc := m.a.genfunc()
 	data := struct {
 		Func, MatchA string
-	}{name, newmatcher()}
+	}{newmatcher(), amc.Name}
 	var buf strings.Builder
 	tmplmap := map[rune]*template.Template{
 		'*': templates.closure,
@@ -157,14 +169,17 @@ func (m *unopmatcher) genfunc(name string) string {
 	if err := tmplmap[m.op].Execute(&buf, &data); err != nil {
 		panic(err)
 	}
-	return strings.Join([]string{
-		m.a.genfunc(data.MatchA),
-		buf.String(),
-	}, funcSeparator)
+	codes := []string{}
+	for _, code := range []string{amc.Code, buf.String()} {
+		if strings.TrimSpace(code) != "" {
+			codes = append(codes, code)
+		}
+	}
+	return &matchcode{
+		Name: data.Func,
+		Code: strings.Join(codes, funcSeparator),
+	}
 }
-
-// A closurematcher matches
-type closurematcher rune
 
 // Compile returns a string containing the Go source for a command-line program
 // that takes a string as its input and outputs the matches of the given regex.
@@ -197,16 +212,9 @@ func Compile(regex string) (string, error) {
 		}
 	}
 
-	type matchcode struct {
-		Name, Code string
-	}
 	matchcodes := make([]matchcode, len(stack))
 	for i := range stack {
-		name := newmatcher()
-		matchcodes[i] = matchcode{
-			Name: name,
-			Code: stack[i].genfunc(name),
-		}
+		matchcodes[i] = *stack[i].genfunc()
 	}
 
 	tmpl, err := template.New("program").Parse(`package main
@@ -228,7 +236,6 @@ func cmatcher(c rune) matcher {
 		return input[pos] == c, 1
 	}
 }
-
 {{ range . }}
 {{ .Code }}
 
