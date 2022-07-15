@@ -115,11 +115,11 @@ We make use of the following language-and-translation scheme:
 
 	concat → closed rest
     rest   → '⋅' closed { print('⋅') } rest
-		   | ε
+           | ε
 
 	closed → basic *  { print('*') }
            | basic +  { print('+') }
-		   | basic
+           | basic
 
     basic  → ( expr )
            | symbol   { print(symbol) }

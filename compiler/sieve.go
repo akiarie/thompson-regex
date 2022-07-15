@@ -124,14 +124,14 @@ We make use of the following language-and-translation scheme:
 
 	concat → closed rest
     rest   → { print('⋅') } closed rest
-		   | ε
+           | ε
 
-	closed → basic * { print('*') }
-           | basic + { print('+') }
-		   | basic
+	closed → basic *  { print('*') }
+           | basic +  { print('+') }
+           | basic
 
     basic  → ( expr )
-           | symbol  { print(symbol) }
+           | symbol   { print(symbol) }
            | ε
 
     symbol → a-Z | A-Z | 0-9
