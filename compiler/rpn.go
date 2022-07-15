@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func expr(input string, w *strings.Builder) (int, error) {
+func expr(input []rune, w *strings.Builder) (int, error) {
 	n, err := concat(input, w)
 	if err != nil {
 		return 0, err
@@ -17,7 +17,7 @@ func expr(input string, w *strings.Builder) (int, error) {
 	return n + m, nil
 }
 
-func union(input string, w *strings.Builder) (int, error) {
+func union(input []rune, w *strings.Builder) (int, error) {
 	// ε is permissible
 	if end(input) {
 		return 0, nil
@@ -29,7 +29,7 @@ func union(input string, w *strings.Builder) (int, error) {
 	if err != nil {
 		return 1, err
 	}
-	w.WriteByte('|')
+	w.WriteRune('|')
 	m, err := union(input[1+n:], w)
 	if err != nil {
 		return 1 + n, err
@@ -37,7 +37,7 @@ func union(input string, w *strings.Builder) (int, error) {
 	return 1 + n + m, nil
 }
 
-func concat(input string, w *strings.Builder) (int, error) {
+func concat(input []rune, w *strings.Builder) (int, error) {
 	n, err := closed(input, w)
 	if err != nil {
 		return 0, err
@@ -49,19 +49,19 @@ func concat(input string, w *strings.Builder) (int, error) {
 	return n + m, nil
 }
 
-func rest(input string, w *strings.Builder) (int, error) {
+func rest(input []rune, w *strings.Builder) (int, error) {
 	// ε is permissible
 	if end(input) {
 		return 0, nil
 	}
-	if input[0] != concatChar {
+	if input[0] != '⋅' {
 		return 0, nil // allow backtracking
 	}
 	n, err := closed(input[1:], w)
 	if err != nil {
 		return 1, err
 	}
-	w.WriteByte(concatChar)
+	w.WriteRune('⋅')
 	m, err := rest(input[1+n:], w)
 	if err != nil {
 		return 1 + n, err
@@ -69,14 +69,14 @@ func rest(input string, w *strings.Builder) (int, error) {
 	return 1 + n + m, nil
 }
 
-func closed(input string, w *strings.Builder) (int, error) {
+func closed(input []rune, w *strings.Builder) (int, error) {
 	n, err := basic(input, w)
 	if err != nil {
 		return 0, err
 	}
 	if !end(input[n:]) {
 		if c := input[n]; c == '*' || c == '+' {
-			w.WriteByte(c)
+			w.WriteRune(c)
 			return n + 1, nil
 		}
 	}
@@ -86,7 +86,7 @@ func closed(input string, w *strings.Builder) (int, error) {
 // A ntparser is a parser for a nonterminal.
 type ntparser func(input string, w *strings.Builder) (int, error)
 
-func basic(input string, w *strings.Builder) (int, error) {
+func basic(input []rune, w *strings.Builder) (int, error) {
 	// ε is permissible
 	if end(input) {
 		return 0, nil
@@ -129,7 +129,7 @@ We make use of the following language-and-translation scheme:
 */
 func RPNConvert(regex string) (string, error) {
 	var buf strings.Builder
-	if _, err := expr(regex, &buf); err != nil {
+	if _, err := expr([]rune(regex), &buf); err != nil {
 		return "", fmt.Errorf("%s: partial result %q", err, buf.String())
 	}
 	return buf.String(), nil

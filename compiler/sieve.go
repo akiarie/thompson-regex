@@ -5,13 +5,11 @@ import (
 	"strings"
 )
 
-const concatChar byte = '^'
-
-func end(input string) bool {
+func end(input []rune) bool {
 	return len(input) == 0 || input[0] == ')'
 }
 
-func exprSieve(input string, w *strings.Builder) (int, error) {
+func exprSieve(input []rune, w *strings.Builder) (int, error) {
 	n, err := concatSieve(input, w)
 	if err != nil {
 		return 0, err
@@ -23,7 +21,7 @@ func exprSieve(input string, w *strings.Builder) (int, error) {
 	return n + m, nil
 }
 
-func unionSieve(input string, w *strings.Builder) (int, error) {
+func unionSieve(input []rune, w *strings.Builder) (int, error) {
 	// ε is permissible
 	if end(input) {
 		return 0, nil
@@ -31,7 +29,7 @@ func unionSieve(input string, w *strings.Builder) (int, error) {
 	if input[0] != '|' {
 		return 0, fmt.Errorf("nonempty union must start with '|'")
 	}
-	w.WriteByte('|')
+	w.WriteRune('|')
 	n, err := concatSieve(input[1:], w)
 	if err != nil {
 		return 1, err
@@ -43,7 +41,7 @@ func unionSieve(input string, w *strings.Builder) (int, error) {
 	return 1 + n + m, nil
 }
 
-func concatSieve(input string, w *strings.Builder) (int, error) {
+func concatSieve(input []rune, w *strings.Builder) (int, error) {
 	n, err := closedSieve(input, w)
 	if err != nil {
 		return 0, err
@@ -55,7 +53,7 @@ func concatSieve(input string, w *strings.Builder) (int, error) {
 	return n + m, nil
 }
 
-func restSieve(input string, w *strings.Builder) (int, error) {
+func restSieve(input []rune, w *strings.Builder) (int, error) {
 	// ε is permissible
 	if end(input) {
 		return 0, nil
@@ -65,7 +63,7 @@ func restSieve(input string, w *strings.Builder) (int, error) {
 	if err != nil {
 		return 0, nil // allows backtracking
 	}
-	w.WriteByte(concatChar)
+	w.WriteRune('⋅')
 	w.WriteString(buf.String())
 	m, err := restSieve(input[n:], w)
 	if err != nil {
@@ -74,27 +72,27 @@ func restSieve(input string, w *strings.Builder) (int, error) {
 	return n + m, nil
 }
 
-func closedSieve(input string, w *strings.Builder) (int, error) {
+func closedSieve(input []rune, w *strings.Builder) (int, error) {
 	n, err := basicSieve(input, w)
 	if err != nil {
 		return 0, err
 	}
 	if !end(input[n:]) {
 		if c := input[n]; c == '*' || c == '+' {
-			w.WriteByte(c)
+			w.WriteRune(c)
 			return n + 1, nil
 		}
 	}
 	return n, nil
 }
 
-func basicSieve(input string, w *strings.Builder) (int, error) {
+func basicSieve(input []rune, w *strings.Builder) (int, error) {
 	// ε is permissible
 	if end(input) {
 		return 0, nil
 	}
 	if input[0] == '(' {
-		w.WriteByte('(')
+		w.WriteRune('(')
 		n, err := exprSieve(input[1:], w)
 		if err != nil {
 			return 1, err
@@ -102,15 +100,15 @@ func basicSieve(input string, w *strings.Builder) (int, error) {
 		if input[n+1] != ')' {
 			return 0, fmt.Errorf("bracket not closed")
 		}
-		w.WriteByte(')')
+		w.WriteRune(')')
 		return n + 2, nil
 	}
 	return 1, symbol(input[0], w)
 }
 
-func symbol(c byte, w *strings.Builder) error {
+func symbol(c rune, w *strings.Builder) error {
 	if ('0' <= c && c <= '9') || ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') {
-		w.WriteByte(c)
+		w.WriteRune(c)
 		return nil
 	}
 	return fmt.Errorf("%q is not an allowed symbol", c)
@@ -140,7 +138,7 @@ We make use of the following language-and-translation scheme:
 */
 func Sieve(regex string) (string, error) {
 	var buf strings.Builder
-	if _, err := exprSieve(regex, &buf); err != nil {
+	if _, err := exprSieve([]rune(regex), &buf); err != nil {
 		return "", fmt.Errorf("%s: partial result %q", err, buf.String())
 	}
 	return buf.String(), nil
