@@ -19,12 +19,12 @@ type CodeGenerators struct {
 }
 
 func codeGensGo() (*CodeGenerators, error) {
-	tmplRune, err := template.New("c").Parse(`runematcher('{{ . }}')`)
+	tmplRune, err := template.New("c").Parse(`char('{{ . }}')`)
 	if err != nil {
 		return nil, err
 	}
 
-	tmplOr, err := template.New("cnode").Parse(`ormatcher(
+	tmplOr, err := template.New("cnode").Parse(`or(
 	{{ .MatchA }},
 	{{ .MatchB }},
 )`)
@@ -32,7 +32,7 @@ func codeGensGo() (*CodeGenerators, error) {
 		return nil, err
 	}
 
-	tmplConcat, err := template.New("concat").Parse(`concatmatcher(
+	tmplConcat, err := template.New("concat").Parse(`concat(
 	{{ .MatchA }},
 	{{ .MatchB }},
 )`)
@@ -40,7 +40,7 @@ func codeGensGo() (*CodeGenerators, error) {
 		return nil, err
 	}
 
-	tmplClosure, err := template.New("closure").Parse(`closurematcher(
+	tmplClosure, err := template.New("closure").Parse(`closure(
 	{{ .MatchA }},
 	{{ .Min }},
 )`)
@@ -100,8 +100,8 @@ import (
 // or false otherwise with an undefined integer.
 type matcher func([]rune) (bool, int)
 
-// runematcher returns a matcher for the given rune.
-func runematcher(c rune) matcher {
+// char returns a matcher for the given rune.
+func char(c rune) matcher {
 	return func(input []rune) (bool, int) {
 		if len(input) > 0 {
 			return input[0] == c, 1
@@ -110,9 +110,9 @@ func runematcher(c rune) matcher {
 	}
 }
 
-// ormatcher returns a single matcher for strings matching any of the
+// or returns a single matcher for strings matching any of the
 // given matchers
-func ormatcher(matchers ...matcher) matcher {
+func or(matchers ...matcher) matcher {
 	return func(input []rune) (bool, int) {
 		for _, m := range matchers {
 			if ok, n := m(input); ok {
@@ -123,9 +123,9 @@ func ormatcher(matchers ...matcher) matcher {
 	}
 }
 
-// concatmatcher returns a single matcher for strings matching the
+// concat returns a single matcher for strings matching the
 // concatenation of the given matchers
-func concatmatcher(matchers ...matcher) matcher {
+func concat(matchers ...matcher) matcher {
 	return func(input []rune) (bool, int) {
 		p := 0
 		for _, m := range matchers {
@@ -146,17 +146,17 @@ func kmatcher(m matcher, k int) matcher {
 	for i := 0; i < k; i++ {
 		matchers[i] = m
 	}
-	return concatmatcher(matchers...)
+	return concat(matchers...)
 }
 
-// closurematcher returns a single matcher for strings matching the closure of
+// closure returns a single matcher for strings matching the closure of
 // the given matcher
-func closurematcher(m matcher, min int) matcher {
+func closure(m matcher, min int) matcher {
 	return func(input []rune) (bool, int) {
 		// match min occurrences first
 		if ok, n := kmatcher(m, min)(input); ok {
 			// then match 1 or more additional 
-			if ok, subn := closurematcher(m, 1)(input[n:]); ok {
+			if ok, subn := closure(m, 1)(input[n:]); ok {
 				n += subn
 			}
 			return true, n
@@ -171,11 +171,11 @@ func main() {
 	}
 	input := []rune(os.Args[1])
 
-	matcher := {{ . }}
+	match := {{ . }}
 
 	matches := []string{}
 	for i := 0; i < len(input); {
-		if ok, n := matcher(input[i:]); ok {
+		if ok, n := match(input[i:]); ok {
 			matches = append(matches, string(input[i:i+n]))
 			i += n
 			continue
