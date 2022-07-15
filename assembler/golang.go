@@ -18,32 +18,23 @@ type CodeGenerators struct {
 	Closure    func(string, int) (string, error)
 }
 
-func codeGensGo() (*CodeGenerators, error) {
-	tmplRune, err := template.New("c").Parse(`char('{{ . }}')`)
+func codeGens(char, or, concat, closure string) (*CodeGenerators, error) {
+	tmplRune, err := template.New("c").Parse(char)
 	if err != nil {
 		return nil, err
 	}
 
-	tmplOr, err := template.New("cnode").Parse(`or(
-	{{ .MatchA }},
-	{{ .MatchB }},
-)`)
+	tmplOr, err := template.New("cnode").Parse(or)
 	if err != nil {
 		return nil, err
 	}
 
-	tmplConcat, err := template.New("concat").Parse(`concat(
-	{{ .MatchA }},
-	{{ .MatchB }},
-)`)
+	tmplConcat, err := template.New("concat").Parse(concat)
 	if err != nil {
 		return nil, err
 	}
 
-	tmplClosure, err := template.New("closure").Parse(`closure(
-	{{ .MatchA }},
-	{{ .Min }},
-)`)
+	tmplClosure, err := template.New("closure").Parse(closure)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +49,7 @@ func codeGensGo() (*CodeGenerators, error) {
 		Concat: func(a, b string) (string, error) {
 			var buf strings.Builder
 			if err := tmplConcat.Execute(&buf, struct {
-				MatchA, MatchB string
+				MatcherFuncA, MatcherFuncB string
 			}{a, b}); err != nil {
 				return "", err
 			}
@@ -67,7 +58,7 @@ func codeGensGo() (*CodeGenerators, error) {
 		Or: func(a, b string) (string, error) {
 			var buf strings.Builder
 			if err := tmplOr.Execute(&buf, struct {
-				MatchA, MatchB string
+				MatcherFuncA, MatcherFuncB string
 			}{a, b}); err != nil {
 				return "", err
 			}
@@ -76,8 +67,8 @@ func codeGensGo() (*CodeGenerators, error) {
 		Closure: func(a string, min int) (string, error) {
 			var buf strings.Builder
 			if err := tmplClosure.Execute(&buf, struct {
-				MatchA string
-				Min    int
+				MatcherFuncA string
+				Min          int
 			}{a, min}); err != nil {
 				return "", err
 			}
@@ -190,7 +181,21 @@ func main() {
 		return "", err
 	}
 
-	gens, err := codeGensGo()
+	gens, err := codeGens(
+		"char('{{ . }}')",
+		`or(
+	{{ .MatcherFuncA }},
+	{{ .MatcherFuncB }},
+)`,
+		`concat(
+	{{ .MatcherFuncA }},
+	{{ .MatcherFuncB }},
+)`,
+		`closure(
+	{{ .MatcherFuncA }},
+	{{ .Min }},
+)`,
+	)
 	if err != nil {
 		return "", err
 	}
