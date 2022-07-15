@@ -12,12 +12,18 @@ type MatcherGenerator interface {
 	Generate(tmpl *CodeGenerators) (string, error)
 }
 
+// CodeGenerators houses functions which can be called by the MatcherGenerators
+// in order to represent matching in whatever format has been configured in the
+// assembler.
 type CodeGenerators struct {
 	Rune       func(rune) (string, error)
 	Or, Concat func(string, string) (string, error)
 	Closure    func(string, int) (string, error)
 }
 
+// codeGens returns CodeGenerators which can be provided to each
+// MatcherGenerator enabling it to represent matching in the format configured
+// in the assembler.
 func codeGens(char, or, concat, closure string) (*CodeGenerators, error) {
 	tmplRune, err := template.New("c").Parse(char)
 	if err != nil {
