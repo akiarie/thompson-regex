@@ -36,7 +36,7 @@ purposes only.`,
 			}
 			sievedexp, err := compiler.Sieve(args[0])
 			if err != nil {
-				log.Fatalln("cannot sive:", err)
+				log.Fatalln("cannot sieve:", err)
 			}
 			rpnexp, err := compiler.RPNConvert(sievedexp)
 			if err != nil {

@@ -79,6 +79,11 @@ func closedSieve(input []rune, w *strings.Builder) (int, error) {
 	}
 	if !end(input[n:]) {
 		if c := input[n]; c == '*' || c == '+' {
+			if !end(input[n+1:]) {
+				if d := input[n+1]; d == '*' || d == '+' {
+					panic(fmt.Errorf("double closures not allowed"))
+				}
+			}
 			w.WriteRune(c)
 			return n + 1, nil
 		}
@@ -136,9 +141,19 @@ We make use of the following language-and-translation scheme:
 
     symbol → a-Z | A-Z | 0-9
 */
-func Sieve(regex string) (string, error) {
+func Sieve(regex string) (s string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if panicErr, ok := r.(error); ok {
+				err = fmt.Errorf("failure: %v", panicErr)
+			} else {
+				panic(r)
+			}
+		}
+	}()
 	var buf strings.Builder
-	if _, err := exprSieve([]rune(regex), &buf); err != nil {
+	_, err = exprSieve([]rune(regex), &buf)
+	if err != nil {
 		return "", fmt.Errorf("%s: partial result %q", err, buf.String())
 	}
 	return buf.String(), nil
