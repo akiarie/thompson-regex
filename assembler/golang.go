@@ -14,48 +14,47 @@ import (
 	"os"
 )
 
-// A matcher is a function representing a particular expression, returning true
-// if the given rune slice matches the expression with the length of the match,
-// or false otherwise with an undefined integer.
-type matcher func([]rune) (bool, int)
-
-// char returns a matcher for the given rune.
-func char(c rune) matcher {
-	return func(input []rune) (bool, int) {
-		if len(input) > 0 {
-			return input[0] == c, 1
-		}
-		return false, 0
-	}
+// A matcher represents the compiled code for matching a particular expression.
+type matcher interface {
+	match(input []rune) (bool, int)
 }
 
-// or returns a single matcher for strings matching any of the
+// A char is a matcher for the given rune.
+type char rune
+
+func (c char) match(input []rune) (bool, int) {
+	if len(input) > 0 {
+		return input[0] == rune(c), 1
+	}
+	return false, 0
+}
+
+// an or is a matcher for strings matching any of the given matchers
+type or []matcher
+
+func (matchers or) match(input []rune) (bool, int) {
+	for _, m := range matchers {
+		if ok, n := m.match(input); ok {
+			return true, n
+		}		
+	}
+	return false, 0
+}
+
+// concat is a matcher for strings matching the concatenation of the
 // given matchers
-func or(matchers ...matcher) matcher {
-	return func(input []rune) (bool, int) {
-		for _, m := range matchers {
-			if ok, n := m(input); ok {
-				return true, n
-			}		
-		}
-		return false, 0
-	}
-}
+type concat []matcher
 
-// concat returns a single matcher for strings matching the
-// concatenation of the given matchers
-func concat(matchers ...matcher) matcher {
-	return func(input []rune) (bool, int) {
-		p := 0
-		for _, m := range matchers {
-			if ok, n := m(input[p:]); ok {
-				p += n
-				continue
-			}
-			return false, p
+func (matchers concat) match(input []rune) (bool, int) {
+	p := 0
+	for _, m := range matchers {
+		if ok, n := m.match(input[p:]); ok {
+			p += n
+			continue
 		}
-		return true, p
+		return false, p
 	}
+	return true, p
 }
 
 // kmatcher returns a single matcher for strings matching exactly k occurrences
@@ -65,23 +64,27 @@ func kmatcher(m matcher, k int) matcher {
 	for i := 0; i < k; i++ {
 		matchers[i] = m
 	}
-	return concat(matchers...)
+	return concat(matchers)
 }
 
-// closure returns a single matcher for strings matching the closure of
-// the given matcher
-func closure(m matcher, min int) matcher {
-	return func(input []rune) (bool, int) {
-		// match min occurrences first
-		if ok, n := kmatcher(m, min)(input); ok {
-			// then match 1 or more additional 
-			if ok, subn := closure(m, 1)(input[n:]); ok {
-				n += subn
-			}
-			return true, n
+// closure is single matcher for strings matching the closure of the
+// given matcher
+type closure struct {
+	m matcher
+	min int
+}
+
+func (cl closure) match(input []rune) (bool, int) {
+	// match min occurrences first
+	if ok, n := kmatcher(cl.m, cl.min).match(input); ok {
+		// then match 1 or more additional 
+		nextcl := closure{cl.m, 1}
+		if ok, subn := nextcl.match(input[n:]); ok {
+			n += subn
 		}
-		return false, 0
+		return true, n
 	}
+	return false, 0
 }
 
 func main() {
@@ -90,11 +93,11 @@ func main() {
 	}
 	input := []rune(os.Args[1])
 
-	match := {{ . }}
+	expmatcher := {{ . }}
 
 	matches := []string{}
 	for i := 0; i < len(input); {
-		if ok, n := match(input[i:]); ok {
+		if ok, n := expmatcher.match(input[i:]); ok {
 			matches = append(matches, string(input[i:i+n]))
 			i += n
 			continue
@@ -102,7 +105,7 @@ func main() {
 		i++
 	}
 
-	fmt.Printf("matches: %q\n", matches)
+	fmt.Printf("%q\n", matches)
 }
 `)
 	if err != nil {
@@ -111,18 +114,18 @@ func main() {
 
 	gens, err := codeGens(
 		"char('{{ . }}')",
-		`or(
+		`or{
 	{{ .MatcherFuncA }},
 	{{ .MatcherFuncB }},
-)`,
-		`concat(
+}`,
+		`concat{
 	{{ .MatcherFuncA }},
 	{{ .MatcherFuncB }},
-)`,
-		`closure(
+}`,
+		`closure{
 	{{ .MatcherFuncA }},
 	{{ .Min }},
-)`,
+}`,
 	)
 	if err != nil {
 		return "", err
