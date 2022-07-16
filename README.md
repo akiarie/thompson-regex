@@ -62,6 +62,41 @@ func main() {
 
 ```
 
+Additional output languages can be added [here](assembler/). For example,
+
+```bash
+./thompson-regex 'a(b|c)*d' -l python3
+```
+
+produces
+
+```python3
+import sys
+
+# trimmed a ton of stuff from here
+
+if len(sys.argv) != 2:
+    print("must supply input string")
+    sys.exit()
+
+inputstr = sys.argv[1]
+
+exprmatcher = ((Char('a') + (Char('b') | Char('c')) ** 0) + Char('d'))
+
+matches = []
+
+i = 0
+while i < len(inputstr):
+    ismatch, n = exprmatcher.match(inputstr[i:])
+    if ismatch:
+        matches += [inputstr[i:i+n]]
+        i += n
+    else:
+        i += 1
+
+print(matches)
+```
+
 ## Purpose.
 
 Ken Thompson's [famous paper](https://dl.acm.org/doi/10.1145/363347.363387) on implementing regular
