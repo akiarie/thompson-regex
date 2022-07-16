@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -61,6 +62,9 @@ func restSieve(input []rune, w *strings.Builder) (int, error) {
 	var buf strings.Builder
 	n, err := closedSieve(input, &buf)
 	if err != nil {
+		if err == errDoubleClosure {
+			return 0, err
+		}
 		return 0, nil // allows backtracking
 	}
 	w.WriteRune('⋅')
@@ -72,6 +76,8 @@ func restSieve(input []rune, w *strings.Builder) (int, error) {
 	return n + m, nil
 }
 
+var errDoubleClosure = errors.New("double closures not allowed")
+
 func closedSieve(input []rune, w *strings.Builder) (int, error) {
 	n, err := basicSieve(input, w)
 	if err != nil {
@@ -81,7 +87,7 @@ func closedSieve(input []rune, w *strings.Builder) (int, error) {
 		if c := input[n]; c == '*' || c == '+' {
 			if !end(input[n+1:]) {
 				if d := input[n+1]; d == '*' || d == '+' {
-					panic(fmt.Errorf("double closures not allowed"))
+					return n, errDoubleClosure
 				}
 			}
 			w.WriteRune(c)
@@ -141,19 +147,9 @@ We make use of the following language-and-translation scheme:
 
     symbol → a-Z | A-Z | 0-9
 */
-func Sieve(regex string) (s string, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			if panicErr, ok := r.(error); ok {
-				err = fmt.Errorf("failure: %v", panicErr)
-			} else {
-				panic(r)
-			}
-		}
-	}()
+func Sieve(regex string) (string, error) {
 	var buf strings.Builder
-	_, err = exprSieve([]rune(regex), &buf)
-	if err != nil {
+	if _, err := exprSieve([]rune(regex), &buf); err != nil {
 		return "", fmt.Errorf("%s: partial result %q", err, buf.String())
 	}
 	return buf.String(), nil
