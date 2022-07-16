@@ -75,7 +75,6 @@ import sys
 if len(sys.argv) != 2:
     print("must supply input string")
     sys.exit()
-
 inputstr = sys.argv[1]
 
 exprmatcher = ((Char('a') + (Char('b') | Char('c')) ** 0) + Char('d'))

@@ -7,7 +7,12 @@ import (
 
 // The Assemblers are the functions that construct output source.
 var Assemblers = map[string]func(MatcherGenerator) (string, error){
-	"golang":  Go,
+	"golang": Go,
+	"go":     Go,
+
+	"C": C,
+	"c": C,
+
 	"python3": Python3,
 }
 
