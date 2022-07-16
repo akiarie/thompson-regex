@@ -33,23 +33,23 @@ func main() {
 	}
 	input := []rune(os.Args[1])
 
-	match := concat(
-		concat(
+	expmatcher := concat{
+		concat{
 			char('a'),
-			closure(
-				or(
+			closure{
+				or{
 					char('b'),
 					char('c'),
-				),
+				},
 				0,
-			),
-		),
+			},
+		},
 		char('d'),
-	)
+	}
 
 	matches := []string{}
 	for i := 0; i < len(input); {
-		if ok, n := match(input[i:]); ok {
+		if ok, n := expmatcher.match(input[i:]); ok {
 			matches = append(matches, string(input[i:i+n]))
 			i += n
 			continue
@@ -57,7 +57,7 @@ func main() {
 		i++
 	}
 
-	fmt.Printf("matches: %q\n", matches)
+	fmt.Printf("%q\n", matches)
 }
 
 ```
