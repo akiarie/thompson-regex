@@ -67,9 +67,6 @@ Additional output languages can be added [here](assembler/). For example,
 ```bash
 ./thompson-regex 'a(b|c)*d' -l python3
 ```
-
-produces
-
 ```python3
 import sys
 
