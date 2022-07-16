@@ -14,15 +14,15 @@ func C(root MatcherGenerator) (string, error) {
 
 /* matches and increments the ptr */
 bool matchc(char c, char **input) {
-    if (*input[0] == '\0' || *input[0] != c) {
-        return false;
-    }
-    (*input)++;
-    return true;
+	if (*input[0] == '\0' || *input[0] != c) {
+		return false;
+	}
+	(*input)++;
+	return true;
 }
 
 bool match(char **input) {
-    bool matched = true;
+	bool matched = true;
 
 	{{ . }}
 
@@ -31,17 +31,17 @@ bool match(char **input) {
 
 int main(int argc, char **argv) {
    if (argc != 2) {
-       printf("must supply input string\n");
-       return 1;
+	   printf("must supply input string\n");
+	   return 1;
    }
    char* input = argv[1];
    while (input[0] != '\0') {
-       char* start = input;
-       if (match(&input)) {
-           printf("%.*s\n", (int)(input-start), start);
-           continue;
-       } 
-       input++;
+	   char* start = input;
+	   if (match(&input)) {
+		   printf("%.*s\n", (int)(input-start), start);
+		   continue;
+	   } 
+	   input++;
    }
 }
 	`)
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
 	}
 
 	gens, err := codeGens(`if (matched) {
-		if (!matchc('{{ . }}', input)) {
+if (!matchc('{{ . }}', input)) {
 			matched = false;
 		}
 	}
